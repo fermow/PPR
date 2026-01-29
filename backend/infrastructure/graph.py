@@ -227,22 +227,23 @@ class SparseGraph:
         """Number of nodes in the graph."""
         return len(self._adjacency_list)
     
-    def to_sparse_matrix(self):
-        node_ids = list(self._adjacency_list.keys())
-        n = len(node_ids)
-        row = []
-        col = []
-        data = []
+def to_sparse_matrix(self):
+    node_ids = list(self._adjacency_list.keys())
+    n = len(node_ids)
+    row, col, data = [], [], []
 
-        for source, neighbors in self._adjacency_list.items():
-            u = self._node_to_idx[source]
-            total_weight = sum(neighbors.values())
+    for source, neighbors in self._adjacency_list.items():
+        u = self._node_to_idx[source]
+        total_weight = sum(neighbors.values())
+        if total_weight == 0: continue # جلوگیری از تقسیم بر صفر
+        
         for target, weight in neighbors.items():
-                v = self._node_to_idx[target]
-                row.append(v)
-                col.append(u)
-                data.append(weight / total_weight)
-        return sparse.coo_matrix((data, (row, col)), shape=(n, n)).tocsr(), node_ids
+            v = self._node_to_idx[target]
+            row.append(v)  # مقصد (Row)
+            col.append(u)  # مبدا (Column)
+            data.append(weight / total_weight)
+            
+    return sparse.coo_matrix((data, (row, col)), shape=(n, n)).tocsr(), node_ids
     def get_dangling_nodes(self):
         n = len(self._adjacency_list)
         dangling_mask = np.zeros(n, dtype=bool)

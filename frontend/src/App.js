@@ -49,56 +49,32 @@ function App() {
     }
   };
 
-  const loadInitialData = async () => {
-    setLoading(true);
-    setError(null);
+const loadInitialData = async () => {
+  setLoading(true);
+  try {
+    // ایجاد گراف دمو در اولین لود
+    await api.createDemoGraph(); 
+    const graphResponse = await api.getCurrentGraph();
     
-    try {
-      if (!apiConnected) {
-        // Use mock data if API is not connected
-      //  loadMockData();
-        return;
-      }
-
-      // 1. Create demo graph
-      const graphResponse = await api.createDemoGraph();
-      
-      if (!graphResponse.success) {
-        throw new Error('Failed to create graph');
-      }
-
-      // 2. Mark some nodes as suspicious (for demo)
-      const suspiciousNodes = {
-        'A': 0.8,
-        'C': 0.6,
-        'E': 0.9,
-        'G': 0.7
-      };
-      
-      await api.markSuspiciousNodes(suspiciousNodes);
-      
-      // 3. Compute PageRank
-      await computePageRank(suspiciousNodes, graphResponse);
-      
-    } catch (err) {
-      console.error('Failed to load data:', err);
-      setError(err.message);
-      // Fallback to mock data
-     // loadMockData();
-    } finally {
-      setLoading(false);
-    }
-  };
-
+    // تبدیل دیتای بک‌اِند به فرمت مورد نیاز ForceGraph
+    const formattedData = {
+      nodes: graphResponse.nodes.map(id => ({ id, group: 1 })),
+      links: graphResponse.edges.map(e => ({ source: e.source, target: e.target, value: e.weight }))
+    };
+    
+    setGraphData(formattedData);
+    setApiConnected(true);
+  } catch (err) {
+    setError("خطا در بارگذاری اولیه گراف");
+  } finally {
+    setLoading(false);
+  }
+};
   const computePageRank = async (suspiciousNodes, graphResponse = null) => {
     setAnalysisRunning(true);
     
     try {
-      // If graph response is not provided, get current graph
-      if (!graphResponse) {
-        graphResponse = await api.getCurrentGraph();
-      }
-      
+    
       const pprResponse = await api.computePageRank({
         damping_factor: 0.85,
         max_iterations: 100,
