@@ -314,3 +314,16 @@ class PowerIterationEngine:
         self._page_rank = r
         
         return {node_id: float(score) for node_id, score in zip(node_ids, r)}
+    def evaluate_accuracy(self, pagerank_results, ground_truth):
+        hits = 0
+        sorted_nodes = sorted(pagerank_results.items(), key=lambda x: x[1], reverse=True)
+        top_k = sorted_nodes[:len(ground_truth)]
+    
+        top_k_ids = [node[0] for node in top_k]
+    
+        for node_id in ground_truth:
+            if node_id in top_k_ids:
+                hits += 1
+            
+        precision = hits / len(top_k) if len(top_k) > 0 else 0
+        return precision
