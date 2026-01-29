@@ -123,7 +123,7 @@ class PowerIterationEngine:
         
         self._personalization_vector = personalization
         return personalization
-    def computeـpage_rank(self, graph, suspicious_nodes=None):
+    def compute(self, graph, suspicious_nodes=None):
         matrix, dangling_mask, node_ids = graph.get_normalized_matrix()
         n = len(node_ids)
     
