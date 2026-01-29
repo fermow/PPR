@@ -243,3 +243,13 @@ class SparseGraph:
                 col.append(u)
                 data.append(weight / total_weight)
         return sparse.coo_matrix((data, (row, col)), shape=(n, n)).tocsr(), node_ids
+    def get_dangling_nodes(self):
+        n = len(self._adjacency_list)
+        dangling_mask = np.zeros(n, dtype=bool)
+    
+        for node_id, neighbors in self._adjacency_list.items():
+            if not neighbors:
+                idx = self._node_to_idx[node_id]
+                dangling_mask[idx] = True
+            
+        return dangling_mask
