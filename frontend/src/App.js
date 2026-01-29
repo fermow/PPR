@@ -52,11 +52,9 @@ function App() {
 const loadInitialData = async () => {
   setLoading(true);
   try {
-    // ایجاد گراف دمو در اولین لود
     await api.createDemoGraph(); 
     const graphResponse = await api.getCurrentGraph();
     
-    // تبدیل دیتای بک‌اِند به فرمت مورد نیاز ForceGraph
     const formattedData = {
       nodes: graphResponse.nodes.map(id => ({ id, group: 1 })),
       links: graphResponse.edges.map(e => ({ source: e.source, target: e.target, value: e.weight }))
