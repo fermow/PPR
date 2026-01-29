@@ -253,3 +253,7 @@ class SparseGraph:
                 dangling_mask[idx] = True
             
         return dangling_mask
+    def get_normalized_matrix(self):
+        matrix, node_ids = self.to_sparse_matrix()
+        dangling_mask = self.get_dangling_nodes()
+        return matrix, dangling_mask, node_ids
