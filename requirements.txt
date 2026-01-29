@@ -1,0 +1,27 @@
+# Core dependencies
+numpy>=1.21.0
+scipy>=1.7.0
+networkx>=2.6.0
+
+# Testing and development
+pytest==7.4.0
+pytest-cov==4.1.0
+black==23.7.0
+flake8==6.0.0
+
+# Optional for visualization
+matplotlib==3.5.0
+
+# For serialization
+pyyam>=6.0
+
+# Type checking (optional for development)
+mypy==1.5.0
+types-PyYAML==6.0.12.10
+
+# Web framework
+Flask>=2.3.0
+Flask-CORS>=4.0.0
+
+# Utilities
+pyyaml>=6.0
