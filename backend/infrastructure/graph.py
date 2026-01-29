@@ -226,3 +226,20 @@ class SparseGraph:
     def __len__(self) -> int:
         """Number of nodes in the graph."""
         return len(self._adjacency_list)
+    
+    def to_sparse_matrix(self):
+        node_ids = list(self._adjacency_list.keys())
+        n = len(node_ids)
+        row = []
+        col = []
+        data = []
+
+        for source, neighbors in self._adjacency_list.items():
+            u = self._node_to_idx[source]
+            total_weight = sum(neighbors.values())
+        for target, weight in neighbors.items():
+                v = self._node_to_idx[target]
+                row.append(v)
+                col.append(u)
+                data.append(weight / total_weight)
+        return sparse.coo_matrix((data, (row, col)), shape=(n, n)).tocsr(), node_ids
