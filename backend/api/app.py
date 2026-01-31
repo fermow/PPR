@@ -147,168 +147,64 @@ def get_current_graph():
 
 @app.route('/graph/demo', methods=['GET'])
 def create_demo_graph():
-    """Create a demo graph for testing"""
-    demo_data = {
-        'directed': True,
-        'edges': [
-            ['A', 'B', 15000],
-            ['A', 'C', 45000],
-            ['B', 'D', 12000],
-            ['C', 'E', 78000],
-            ['D', 'F', 9000],
-            ['E', 'G', 125000],
-            ['F', 'H', 8000],
-            ['G', 'A', 95000],
-            ['H', 'B', 11000],
-            ['C', 'H', 32000],
-            ['E', 'F', 56000],
-            ['G', 'D', 87000]
-        ]
-    }
+    global current_graph_id
+    graph = SparseGraph(directed=True)
+    edges = [
+        ['A', 'B', 15000], ['A', 'C', 45000], ['B', 'D', 12000],
+        ['C', 'E', 78000], ['D', 'F', 9000], ['E', 'G', 125000],
+        ['F', 'H', 8000], ['G', 'A', 95000], ['H', 'B', 11000]
+    ]
+    for u, v, w in edges:
+        graph.add_edge(u, v, w)
     
-    # Reuse create_graph functionality
-    return jsonify({
-        'success': True,
-        'graph_id': 'demo_graph',
-        'nodes': ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'],
-        'edges': [
-            {'source': 'A', 'target': 'B', 'weight': 15000},
-            {'source': 'A', 'target': 'C', 'weight': 45000},
-            {'source': 'B', 'target': 'D', 'weight': 12000},
-            {'source': 'C', 'target': 'E', 'weight': 78000},
-            {'source': 'D', 'target': 'F', 'weight': 9000},
-            {'source': 'E', 'target': 'G', 'weight': 125000},
-            {'source': 'F', 'target': 'H', 'weight': 8000},
-            {'source': 'G', 'target': 'A', 'weight': 95000},
-            {'source': 'H', 'target': 'B', 'weight': 11000},
-            {'source': 'C', 'target': 'H', 'weight': 32000},
-            {'source': 'E', 'target': 'F', 'weight': 56000},
-            {'source': 'G', 'target': 'D', 'weight': 87000}
-        ],
-        'node_count': 8,
-        'edge_count': 12,
-        'directed': True
-    })
-
+    graph_id = "demo_graph"
+    graphs[graph_id] = graph
+    current_graph_id = graph_id
+    
+    return jsonify({'success': True, 'graph_id': graph_id, 'node_count': 8})
 @app.route('/pagerank/compute', methods=['POST'])
 def compute_pagerank():
-    """Compute Personalized PageRank"""
+    global current_graph_id
     try:
-        data = request.json
+        data = request.json or {}
         
-        # If no graph is created yet, use demo graph
-        if current_graph_id is None:
-            # Create a demo graph
-            demo_response = create_demo_graph()
-            if not demo_response.json.get('success'):
-                return jsonify({
-                    'success': False,
-                    'error': 'No graph available'
-                }), 400
+        # اگر گرافی ساخته نشده، اول گراف دمو را بساز
+        if current_graph_id is None or current_graph_id not in graphs:
+            create_demo_graph()
         
-        # For demo purposes, we'll use hardcoded nodes
-        nodes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+        graph = graphs[current_graph_id]
         
-        # Get parameters
-        damping_factor = data.get('damping_factor', 0.85)
-        max_iterations = data.get('max_iterations', 100)
-        tolerance = data.get('tolerance', 1e-8)
+        # مقداردهی به موتور
+        engine = PowerIterationEngine(
+            damping_factor=data.get('damping_factor', 0.85),
+            max_iterations=data.get('max_iterations', 100),
+            tolerance=data.get('tolerance', 1e-8)
+        )
         
-        # Get suspicious nodes
+        start_time = datetime.now()
         suspicious_nodes = data.get('suspicious_nodes', {})
         
-        # Get base weights (transaction volumes)
-        base_weights = data.get('base_weights', {})
+        # اجرای محاسبات روی گراف موجود
+        pagerank_scores = engine.compute(graph, suspicious_nodes=suspicious_nodes)
         
-        # Create demo adjacency matrix (8x8)
-        adj_matrix = np.array([
-            [0, 1, 1, 0, 0, 0, 0, 0],  # A -> B, C
-            [0, 0, 0, 1, 0, 0, 0, 0],  # B -> D
-            [0, 0, 0, 0, 1, 0, 0, 1],  # C -> E, H
-            [0, 0, 0, 0, 0, 1, 0, 0],  # D -> F
-            [0, 0, 0, 0, 0, 1, 1, 0],  # E -> F, G
-            [0, 0, 0, 0, 0, 0, 0, 1],  # F -> H
-            [1, 0, 0, 1, 0, 0, 0, 0],  # G -> A, D
-            [0, 1, 0, 0, 0, 0, 0, 0],  # H -> B
-        ], dtype=np.float64)
-        
-        # Add some random weights
-        adj_matrix *= np.random.rand(8, 8) * 0.5 + 0.5
-        
-        # Create and configure PageRank engine
-        engine = PowerIterationEngine(
-            damping_factor=damping_factor,
-            max_iterations=max_iterations,
-            tolerance=tolerance
-        )
-        
-        # Compute PageRank
-        start_time = datetime.now()
-        pagerank_scores = engine.compute_page_rank(
-            node_ids=nodes,
-            adjacency_matrix=adj_matrix,
-            suspicious_nodes=suspicious_nodes,
-            base_weights=base_weights
-        )
         compute_time = (datetime.now() - start_time).total_seconds() * 1000
-        
-        # Get top fraud candidates
-        top_candidates = engine.get_top_fraud_candidates(
-            page_rank_scores=pagerank_scores,
-            suspicion_scores=suspicious_nodes,
-            top_k=10
-        )
-        
-        # Format results
-        formatted_candidates = []
-        for node_id, ppr_score, suspicion in top_candidates:
-            formatted_candidates.append({
-                'node_id': node_id,
-                'page_rank_score': float(ppr_score),
-                'suspicion_score': float(suspicion),
-                'risk_score': float(ppr_score * (1.0 + suspicion))
-            })
-        
-        # Get convergence info
-        convergence_info = engine.get_convergence_info()
-        
-        # Prepare node details for response
-        node_details = []
-        for node in nodes:
-            # Mock connections
-            outgoing_count = np.random.randint(1, 4)
-            incoming_count = np.random.randint(1, 4)
-            
-            node_details.append({
-                'id': node,
-                'page_rank': float(pagerank_scores.get(node, 0)),
-                'outgoing_count': outgoing_count,
-                'incoming_count': incoming_count,
-                'total_connections': outgoing_count + incoming_count,
-                'is_suspicious': node in suspicious_nodes,
-                'suspicion_score': float(suspicious_nodes.get(node, 0))
-            })
+        top_candidates = sorted(pagerank_scores.items(), key=lambda x: x[1], reverse=True)[:10]
         
         return jsonify({
             'success': True,
             'compute_time_ms': compute_time,
             'pagerank_scores': pagerank_scores,
-            'top_fraud_candidates': formatted_candidates,
-            'node_details': node_details,
-            'convergence_info': convergence_info,
-            'graph_summary': {
-                'node_count': len(nodes),
-                'edge_count': 12,
-                'suspicious_node_count': len(suspicious_nodes)
-            }
+            'top_fraud_candidates': [
+                {'node_id': k, 'risk_score': float(v)} for k, v in top_candidates
+            ],
+            'convergence_info': engine.get_convergence_info()
         })
         
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 400
-
+        # چاپ خطا در کنسول پایتون برای عیب‌یابی راحت‌تر شما
+        print(f"Error in compute: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 400
+    
 @app.route('/nodes/suspicious', methods=['POST'])
 def mark_suspicious_nodes():
     """Mark nodes as suspicious with scores"""

@@ -131,57 +131,28 @@ class TeleportDanglingStrategy(BaseDanglingNodeStrategy):
 
 
 class SuspicionBasedPersonalization(BasePersonalizationStrategy):
-    """
-    Personalization vector biased toward suspicious nodes for fraud detection.
-    """
-    
-    def __init__(self, suspicion_weight: float = 5.0):
-        """
-        Args:
-            suspicion_weight: Multiplier for suspicious nodes' importance
-        """
-        self.suspicion_weight = max(1.0, suspicion_weight)
-    
-    def compute_personalization_vector(
-        self, 
-        node_ids: List[str],
-        suspicious_nodes: Optional[Dict[str, float]] = None,
-        base_weights: Optional[Dict[str, float]] = None
-    ) -> NDArray[np.float64]:
+    def compute_personalization_vector(self, node_ids, suspicious_nodes=None, base_weights=None):
         n = len(node_ids)
-        
-        # Create node_id to index mapping
+        p = np.zeros(n)
         node_to_idx = {node_id: i for i, node_id in enumerate(node_ids)}
         
-        # Initialize with uniform distribution
-        personalization = np.ones(n) / n
-        
-        # Apply base weights if provided
-        if base_weights:
-            for node_id, weight in base_weights.items():
-                if node_id in node_to_idx:
-                    idx = node_to_idx[node_id]
-                    personalization[idx] = weight
-        
-        # Boost suspicious nodes
-        if suspicious_nodes:
-            for node_id, suspicion_score in suspicious_nodes.items():
-                if node_id in node_to_idx:
-                    idx = node_to_idx[node_id]
-                    # Scale by suspicion weight and score
-                    boost = 1.0 + (self.suspicion_weight - 1.0) * suspicion_score
-                    personalization[idx] *= boost
-        
-        # Normalize to sum to 1
-        total = np.sum(personalization)
+        if not suspicious_nodes:
+            return np.ones(n) / n
+            
+        for node_id, score in suspicious_nodes.items():
+            if node_id in node_to_idx:
+                p[node_to_idx[node_id]] = score
+                
+        total = np.sum(p)
         if total > 0:
-            personalization /= total
-        
-        return personalization
-    
-    def get_description(self) -> str:
-        return f"Suspicion-biased personalization (weight={self.suspicion_weight})"
+            p /= total
+        else:
+            p = np.ones(n) / n
+            
+        return p
 
+    def get_description(self):
+        return "Biases the PageRank toward nodes with pre-defined suspicion scores."
 
 class TransactionVolumePersonalization(BasePersonalizationStrategy):
     """

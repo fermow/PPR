@@ -123,64 +123,38 @@ class PowerIterationEngine:
         
         self._personalization_vector = personalization
         return personalization
-    
-    def compute_page_rank(
-        self,
-        node_ids: List[str],
-        adjacency_matrix: NDArray[np.float64],
-        weights: Optional[NDArray[np.float64]] = None,
-        suspicious_nodes: Optional[Dict[str, float]] = None,
-        base_weights: Optional[Dict[str, float]] = None
-    ) -> Dict[str, float]:
-        """
-        Compute personalized PageRank scores for all nodes.
-        
-        Args:
-            node_ids: List of node identifiers
-            adjacency_matrix: Binary adjacency matrix
-            weights: Optional edge weight matrix
-            suspicious_nodes: Suspicion scores for fraud detection
-            base_weights: Base importance weights
-            
-        Returns:
-            Dictionary mapping node_id to PageRank score
-        """
+    def compute(self, graph, suspicious_nodes=None):
+        matrix, dangling_mask, node_ids = graph.get_normalized_matrix()
         n = len(node_ids)
-        
-        # Build transition matrix
-        M = self.build_transition_matrix(adjacency_matrix, weights)
-        
-        # Compute personalization vector
-        p = self.compute_personalization_vector(node_ids, suspicious_nodes, base_weights)
-        
-        # Initialize rank vector uniformly
-        r = np.ones(n) / n
-        
-        # Power iteration
+    
+        p = np.zeros(n)
+        if suspicious_nodes:
+            for node_id, score in suspicious_nodes.items():
+                if node_id in graph._node_to_idx:
+                    p[graph._node_to_idx[node_id]] = score
+    
+        if np.sum(p) > 0:
+            p /= np.sum(p)
+        else:
+            p = np.ones(n) / n
+
+        r = p.copy()
+    
         for iteration in range(self.max_iterations):
             r_prev = r.copy()
-            
-            # Core PageRank formula: r(t+1) = (1 - α) * r(t)M + α * p
-            r = (1 - self.damping_factor) * (r_prev @ M) + self.damping_factor * p
-            
-            # Check convergence
+        
+            dangling_sum = np.sum(r_prev[dangling_mask])
+        
+            r = (1 - self.damping_factor) * (matrix @ r_prev)
+            r += (self.damping_factor + (1 - self.damping_factor) * dangling_sum) * p
+        
             diff = np.linalg.norm(r - r_prev, ord=1)
-            
             if diff < self.tolerance:
                 self._converged = True
                 self._iterations_performed = iteration + 1
                 break
-        
-        else:
-            # Loop completed without convergence
-            self._converged = False
-            self._iterations_performed = self.max_iterations
-        
-        self._page_rank = r
-        
-        # Return as dictionary
         return {node_id: float(score) for node_id, score in zip(node_ids, r)}
-    
+ 
     def get_top_fraud_candidates(
         self,
         page_rank_scores: Dict[str, float],
@@ -340,3 +314,16 @@ class PowerIterationEngine:
         self._page_rank = r
         
         return {node_id: float(score) for node_id, score in zip(node_ids, r)}
+    def evaluate_accuracy(self, pagerank_results, ground_truth):
+        hits = 0
+        sorted_nodes = sorted(pagerank_results.items(), key=lambda x: x[1], reverse=True)
+        top_k = sorted_nodes[:len(ground_truth)]
+    
+        top_k_ids = [node[0] for node in top_k]
+    
+        for node_id in ground_truth:
+            if node_id in top_k_ids:
+                hits += 1
+            
+        precision = hits / len(top_k) if len(top_k) > 0 else 0
+        return precision
