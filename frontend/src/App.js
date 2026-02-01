@@ -10,7 +10,9 @@ import {
   BarChart3,
   Play,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  Target,
+  Search
 } from 'lucide-react';
 import GraphVisualization from './components/GraphVisualization';
 import FraudMetrics from './components/FraudMetrics';
@@ -27,11 +29,13 @@ function App() {
   const [systemStats, setSystemStats] = useState({
     nodes: 0,
     edges: 0,
-    suspiciousNodes: 0,
+    manualSeeds: 0,
+    potentialFraud: 0,
     pprTime: '0.0ms'
   });
   const [error, setError] = useState(null);
   const [analysisRunning, setAnalysisRunning] = useState(false);
+  const [suspiciousNodes, setSuspiciousNodes] = useState({});
 
   // Load initial data
   useEffect(() => {
@@ -48,130 +52,166 @@ function App() {
       setApiConnected(false);
     }
   };
-const loadInitialData = async () => {
-  setLoading(true);
-  setError(null); 
-  try {
-    const response = await api.loadCongressGraph(); 
-    
-    if (response.success) {
-      const graphResponse = await api.getCurrentGraph();
-      
-      const formattedData = {
-        nodes: graphResponse.nodes.map(id => ({ 
-          id, 
-          group: 1,
-        })),
-        links: graphResponse.edges.map(e => ({ 
-          source: e.source, 
-          target: e.target, 
-          value: e.weight 
-        }))
-      };
-      
-      setGraphData(formattedData);
-      setApiConnected(true);
-    } else {
-      throw new Error(response.error || "بک‌اِند نتوانست دیتا را لود کند");
-    }
-  } catch (err) {
-    console.error("Initialization Error:", err);
-    setError("خطا در بارگذاری دیتای کنگره. مطمئن شو فایل JSON در پوشه بک‌اِند هست.");
-    setApiConnected(false);
-  } finally {
-    setLoading(false);
-  }
-};
-const computePageRank = async (suspiciousNodes) => {
-  setAnalysisRunning(true);
-  try {
-    // ابتدا گراف فعلی را میگیریم تا داده‌های یال‌ها و نودها کامل باشد
-    const graphResponse = await api.getCurrentGraph();
-    
-    const pprResponse = await api.computePageRank({
-      damping_factor: 0.85,
-      max_iterations: 100,
-      tolerance: 1e-8,
-      suspicious_nodes: suspiciousNodes
-    });
-    
-    if (pprResponse.success && graphResponse) {
-      setPagerankResults(pprResponse);
-      
-      const transformedData = transformDataForFrontend(
-        graphResponse,
-        pprResponse,
-        suspiciousNodes
-      );
-      
-      setGraphData(transformedData.graphData);
-      setSystemStats(transformedData.systemStats);
-    }
-  } catch (err) {
-    console.error('Failed to compute PageRank:', err);
-    setError("خطا در محاسبه الگوریتم. از اتصال بک‌اِند مطمئن شوید.");
-  } finally {
-    setAnalysisRunning(false);
-  }
-};
 
-const transformDataForFrontend = (graphResponse, pprResponse, suspiciousNodes) => {
-  if (!graphResponse || !graphResponse.nodes) return { graphData: null, systemStats: {} };
-
-  const nodes = graphResponse.nodes.map(nodeId => {
-    const pprScore = pprResponse.pagerank_scores?.[nodeId] || 0;
-    const suspicion = suspiciousNodes[nodeId] || 0;
-    
-    let group = 1;
-    if (pprScore > 0.01) group = 2; 
-    if (pprScore > 0.05) group = 3;
-    if (suspicion > 0.5) group = 4;
-    
-    return {
-      id: nodeId,
-      group: group,
-      ppr: pprScore,
-      suspicious: suspicion > 0.5,
-      transactions: Math.floor(pprScore * 10000),  
-      suspicionScore: suspicion
-    };
-  });
-
-  const links = graphResponse.edges.map(e => ({
-    source: e.source,
-    target: e.target,
-    value: e.weight || 1
-  })) || [];
-
-  return {
-    graphData: { nodes, links },
-    systemStats: {
-      nodes: graphResponse.node_count || nodes.length,
-      edges: links.length,
-      suspiciousNodes: Object.keys(suspiciousNodes).length,
-      pprTime: `${pprResponse.compute_time_ms?.toFixed(1) || '0.0'}ms`
+  const loadInitialData = async () => {
+    setLoading(true);
+    setError(null); 
+    try {
+      const response = await api.loadCongressGraph(); 
+      
+      if (response.success) {
+        const graphResponse = await api.getCurrentGraph();
+        
+        const formattedData = {
+          nodes: graphResponse.nodes.map(id => ({ 
+            id, 
+            group: 1,
+          })),
+          links: graphResponse.edges.map(e => ({ 
+            source: e.source, 
+            target: e.target, 
+            value: e.weight 
+          }))
+        };
+        
+        setGraphData(formattedData);
+        setApiConnected(true);
+      } else {
+        throw new Error(response.error || "بک‌اِند نتوانست دیتا را لود کند");
+      }
+    } catch (err) {
+      console.error("Initialization Error:", err);
+      setError("خطا در بارگذاری دیتای کنگره. مطمئن شو فایل JSON در پوشه بک‌اِند هست.");
+      setApiConnected(false);
+    } finally {
+      setLoading(false);
     }
   };
-};
-   
 
-const handleStartAnalysis = async () => {
-  if (apiConnected) {
-    await computePageRank({
-      'RepAdamSchiff': 0.9,
-      'SpeakerPelosi': 0.9,
-      'SenSchumer': 0.8,
-      'GOPLeader': 0.8,
-      'SenJohnThune': 0.7,
-      'RepJamesComer': 0.7,
-      'SenCapito': 0.6,
-      'SteveScalise': 0.9,
-      'SenDuckworth': 0.8,
-      'RepMcCaul': 0.7,
-      'SenStabenow': 0.6
+  const computePageRank = async (manualSeedNodes) => {
+    setAnalysisRunning(true);
+    try {
+      const graphResponse = await api.getCurrentGraph();
+      
+      const pprResponse = await api.computePageRank({
+        damping_factor: 0.85,
+        max_iterations: 100,
+        tolerance: 1e-8,
+        suspicious_nodes: manualSeedNodes
+      });
+      
+      if (pprResponse.success && graphResponse) {
+        setPagerankResults(pprResponse);
+        setSuspiciousNodes(manualSeedNodes);
+        
+        const transformedData = transformDataForFrontend(
+          graphResponse,
+          pprResponse,
+          manualSeedNodes
+        );
+        
+        setGraphData(transformedData.graphData);
+        setSystemStats(transformedData.systemStats);
+      }
+    } catch (err) {
+      console.error('Failed to compute PageRank:', err);
+      setError("خطا در محاسبه الگوریتم. از اتصال بک‌اِند مطمئن شوید.");
+    } finally {
+      setAnalysisRunning(false);
+    }
+  };
+
+  const transformDataForFrontend = (graphResponse, pprResponse, manualSeedNodes) => {
+    if (!graphResponse || !graphResponse.nodes) return { graphData: null, systemStats: {} };
+
+    // Extract all nodes with their PPR scores
+    const allNodes = graphResponse.nodes.map(nodeId => {
+      const pprScore = pprResponse.pagerank_scores?.[nodeId] || 0;
+      const isManualSeed = manualSeedNodes[nodeId] > 0.5;
+      
+      return {
+        id: nodeId,
+        ppr: pprScore,
+        isManualSeed: isManualSeed
+      };
     });
-  }
-};
+
+    // Sort by PPR score descending
+    const sortedNodes = [...allNodes].sort((a, b) => b.ppr - a.ppr);
+    
+    // Find potential fraud nodes (top 15% of nodes by PPR that are NOT manual seeds)
+    const potentialFraudCount = Math.max(5, Math.floor(sortedNodes.length * 0.15));
+    const potentialFraudNodes = [];
+    
+    for (const node of sortedNodes) {
+      if (!node.isManualSeed && node.ppr > 0.001) {
+        potentialFraudNodes.push(node.id);
+        if (potentialFraudNodes.length >= potentialFraudCount) break;
+      }
+    }
+
+    // Create final nodes with proper grouping
+    const nodes = allNodes.map(node => {
+      const isManualSeed = node.isManualSeed;
+      const isPotentialFraud = potentialFraudNodes.includes(node.id) && !isManualSeed;
+      
+      // Group assignment:
+      // group 1: Normal nodes (Blue) - #22d3ee
+      // group 2: Manual Seeds (Pink) - #ec4899
+      // group 3: Potential Fraud (Golden) - #fbbf24
+      let group = 1; // Default: normal
+      if (isPotentialFraud) {
+        group = 3; // Potential fraud (Golden)
+      } else if (isManualSeed) {
+        group = 2; // Manual seed
+      }
+      
+      return {
+        id: node.id,
+        group: group,
+        ppr: node.ppr,
+        suspicious: isManualSeed,
+        isPotentialFraud: isPotentialFraud,
+        transactions: Math.floor(node.ppr * 100000),
+        suspicionScore: isManualSeed ? manualSeedNodes[node.id] || 0.9 : 0
+      };
+    });
+
+    const links = graphResponse.edges.map(e => ({
+      source: e.source,
+      target: e.target,
+      value: e.weight || 1
+    })) || [];
+
+    return {
+      graphData: { nodes, links },
+      systemStats: {
+        nodes: graphResponse.node_count || nodes.length,
+        edges: links.length,
+        manualSeeds: Object.keys(manualSeedNodes).length,
+        potentialFraud: potentialFraudNodes.length,
+        pprTime: `${pprResponse.compute_time_ms?.toFixed(1) || '0.0'}ms`
+      }
+    };
+  };
+   
+  const handleStartAnalysis = async () => {
+    if (apiConnected) {
+      await computePageRank({
+        'RepAdamSchiff': 0.9,
+        'SpeakerPelosi': 0.9,
+        'SenSchumer': 0.8,
+        'GOPLeader': 0.8,
+        'SenJohnThune': 0.7,
+        'RepJamesComer': 0.7,
+        'SenCapito': 0.6,
+        'SteveScalise': 0.9,
+        'SenDuckworth': 0.8,
+        'RepMcCaul': 0.7,
+        'SenStabenow': 0.6
+      });
+    }
+  };
 
   const handleRefresh = () => {
     loadInitialData();
@@ -274,10 +314,36 @@ const handleStartAnalysis = async () => {
         </div>
       )}
 
+      {/* Legend */}
+      {graphData && (
+        <div className="container mx-auto px-4 pt-4">
+          <div className="glass-card p-4 mb-4">
+            <h3 className="font-bold mb-3 flex items-center">
+              <Target className="w-5 h-5 mr-2 text-neon-cyan" />
+              Node Color Legend
+            </h3>
+            <div className="flex flex-wrap gap-4">
+              <div className="flex items-center">
+                <div className="w-4 h-4 rounded-full bg-neon-cyan mr-2"></div>
+                <span className="text-sm">Normal Nodes</span>
+              </div>
+              <div className="flex items-center">
+                <div className="w-4 h-4 rounded-full bg-neon-pink mr-2"></div>
+                <span className="text-sm">Manual Seeds (Marked Suspicious)</span>
+              </div>
+              <div className="flex items-center">
+                <div className="w-4 h-4 rounded-full bg-yellow-500 mr-2"></div>
+                <span className="text-sm">Potential Fraud (Algorithm Detected)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           <div className="glass-card p-6 relative overflow-hidden">
             <div className="scan-line"></div>
             <div className="flex items-center justify-between">
@@ -298,14 +364,30 @@ const handleStartAnalysis = async () => {
             <div className="scan-line"></div>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-cyber-gray-400 text-sm">Suspicious Nodes</p>
-                <p className="text-3xl font-bold text-neon-pink">{systemStats.suspiciousNodes}</p>
+                <p className="text-cyber-gray-400 text-sm">Manual Seeds</p>
+                <p className="text-3xl font-bold text-neon-pink">{systemStats.manualSeeds}</p>
                 <p className="text-xs text-cyber-gray-500 mt-1">
-                  {systemStats.suspiciousNodes > 3 ? 'High Risk' : 'Normal'}
+                  User-marked suspicious
                 </p>
               </div>
               <div className="p-3 rounded-full bg-neon-pink/10">
                 <AlertTriangle className="w-6 h-6 text-neon-pink" />
+              </div>
+            </div>
+          </div>
+
+          <div className="glass-card p-6 relative overflow-hidden">
+            <div className="scan-line"></div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-cyber-gray-400 text-sm">Potential Fraud</p>
+                <p className="text-3xl font-bold text-yellow-500">{systemStats.potentialFraud || 0}</p>
+                <p className="text-xs text-cyber-gray-500 mt-1">
+                  Algorithm detected
+                </p>
+              </div>
+              <div className="p-3 rounded-full bg-yellow-500/10">
+                <Search className="w-6 h-6 text-yellow-500" />
               </div>
             </div>
           </div>
@@ -404,6 +486,7 @@ const handleStartAnalysis = async () => {
                     <FraudMetrics 
                       data={graphData} 
                       pagerankResults={pagerankResults}
+                      suspiciousNodes={suspiciousNodes}
                     />
                   </div>
                 </div>
@@ -431,6 +514,7 @@ const handleStartAnalysis = async () => {
                   <NodeDetails 
                     data={graphData} 
                     pagerankResults={pagerankResults}
+                    suspiciousNodes={suspiciousNodes}
                   />
                 </div>
                 <div className="glass-card p-6">

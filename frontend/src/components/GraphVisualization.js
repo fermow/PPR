@@ -43,34 +43,47 @@ const GraphVisualization = ({ data, interactive = false }) => {
   return (
     <div className="relative h-full w-full">
       <div className="absolute inset-0 bg-gradient-to-br from-neon-cyan/5 to-neon-purple/5 rounded-lg"></div>
-      <ForceGraph2D
-        ref={graphRef}
-        graphData={data}
-        nodeLabel="id"
-        nodeAutoColorBy="group"
-        nodeRelSize={8}
-        nodeVal={node => (node.ppr || 0.1) * 10}
-        nodeColor={node => {
-          if (node.suspicious) return '#ec4899'; // neon-pink
-          if (node.group === 4) return '#a855f7'; // neon-purple
-          return '#22d3ee'; // neon-cyan
-        }}
-        linkColor={() => 'rgba(34, 211, 238, 0.3)'}
-        linkWidth={link => Math.sqrt(link.value || 1) / 100}
-        linkDirectionalParticles={2}
-        linkDirectionalParticleWidth={2}
-        linkDirectionalParticleColor={() => '#22d3ee'}
-        backgroundColor="rgba(2, 6, 23, 0)"
-        width={dimensions.width}
-        height={dimensions.height}
-        enableNodeDrag={interactive}
-        enableZoomInteraction={interactive}
-        enablePanInteraction={interactive}
-        onNodeClick={node => {
-          console.log('Node clicked:', node);
-          // You can add custom click handler here
-        }}
-      />
+     <ForceGraph2D
+  ref={graphRef}
+  graphData={data}
+
+  nodeLabel="id"
+
+  nodeRelSize={14}
+  nodeVal={node => {
+    if (node.group === 2) return 1.5;
+    if (node.group === 3) return 1;
+    return 0.5;
+  }}
+
+  nodeColor={node => {
+    if (node.group === 2) return '#ec4899'; // صورتی
+    if (node.group === 3) return '#facc15';   // طلایی
+    return '#22d3ee';                      // آبی
+  }}
+
+  linkColor={() => 'rgba(34, 211, 238, 0.25)'}
+  linkWidth={0.5}
+
+  linkDirectionalParticles={interactive ? 1 : 0}
+  linkDirectionalParticleWidth={1}
+  linkDirectionalParticleColor={() => '#22d3ee'}
+
+  backgroundColor="rgba(2, 6, 23, 0)"
+  width={dimensions.width}
+  height={dimensions.height}
+
+  enableNodeDrag={interactive}
+  enableZoomInteraction={interactive}
+  enablePanInteraction={interactive}
+
+  onNodeClick={node => {
+    console.log('FULL NODE:', node);
+
+    console.log('Node clicked:', node);
+  }}
+/>
+
     </div>
   );
 };
