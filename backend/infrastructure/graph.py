@@ -227,23 +227,23 @@ class SparseGraph:
         """Number of nodes in the graph."""
         return len(self._adjacency_list)
     
-def to_sparse_matrix(self):
-    node_ids = list(self._adjacency_list.keys())
-    n = len(node_ids)
-    row, col, data = [], [], []
+    def to_sparse_matrix(self):
+        node_ids = list(self._adjacency_list.keys())
+        n = len(node_ids)
+        row, col, data = [], [], []
 
-    for source, neighbors in self._adjacency_list.items():
-        u = self._node_to_idx[source]
-        total_weight = sum(neighbors.values())
-        if total_weight == 0: continue # جلوگیری از تقسیم بر صفر
+        for source, neighbors in self._adjacency_list.items():
+            u = self._node_to_idx[source]
+            total_weight = sum(neighbors.values())
+            if total_weight == 0: continue # جلوگیری از تقسیم بر صفر
         
-        for target, weight in neighbors.items():
-            v = self._node_to_idx[target]
-            row.append(v)  # مقصد (Row)
-            col.append(u)  # مبدا (Column)
-            data.append(weight / total_weight)
+            for target, weight in neighbors.items():
+                v = self._node_to_idx[target]
+                row.append(v)  # مقصد (Row)
+                col.append(u)  # مبدا (Column)
+                data.append(weight / total_weight)
             
-    return sparse.coo_matrix((data, (row, col)), shape=(n, n)).tocsr(), node_ids
+        return sparse.coo_matrix((data, (row, col)), shape=(n, n)).tocsr(), node_ids
     def get_dangling_nodes(self):
         n = len(self._adjacency_list)
         dangling_mask = np.zeros(n, dtype=bool)
@@ -258,3 +258,23 @@ def to_sparse_matrix(self):
         matrix, node_ids = self.to_sparse_matrix()
         dangling_mask = self.get_dangling_nodes()
         return matrix, dangling_mask, node_ids
+    def load_congress_data(self, json_path):
+        import json
+        with open(json_path, 'r') as f:
+            data = json.load(f)[0]
+        
+        usernames = data['usernameList']
+        out_list = data['outList']
+        out_weight = data['outWeight']
+        
+        for name in usernames:
+            self.add_node(name)
+            
+        for i, targets in enumerate(out_list):
+            source = usernames[i]
+            for j, target_idx in enumerate(targets):
+                target = usernames[target_idx]
+                weight = out_weight[i][j]
+                self.add_edge(source, target, weight)
+        
+        return usernames

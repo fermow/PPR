@@ -70,6 +70,15 @@ class FraudDetectionAPI {
       throw error;
     }
   }
+  async loadCongressGraph() {
+    try {
+      const response = await fetch(`${this.baseUrl}/graph/congress`);
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to load Congress graph:', error);
+      throw error;
+    }
+  }
 
   async getAnalysisSummary() {
     try {

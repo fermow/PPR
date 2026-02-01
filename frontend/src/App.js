@@ -48,169 +48,130 @@ function App() {
       setApiConnected(false);
     }
   };
-
 const loadInitialData = async () => {
   setLoading(true);
+  setError(null); 
   try {
-    await api.createDemoGraph(); 
-    const graphResponse = await api.getCurrentGraph();
+    const response = await api.loadCongressGraph(); 
     
-    const formattedData = {
-      nodes: graphResponse.nodes.map(id => ({ id, group: 1 })),
-      links: graphResponse.edges.map(e => ({ source: e.source, target: e.target, value: e.weight }))
-    };
-    
-    setGraphData(formattedData);
-    setApiConnected(true);
+    if (response.success) {
+      const graphResponse = await api.getCurrentGraph();
+      
+      const formattedData = {
+        nodes: graphResponse.nodes.map(id => ({ 
+          id, 
+          group: 1,
+        })),
+        links: graphResponse.edges.map(e => ({ 
+          source: e.source, 
+          target: e.target, 
+          value: e.weight 
+        }))
+      };
+      
+      setGraphData(formattedData);
+      setApiConnected(true);
+    } else {
+      throw new Error(response.error || "بک‌اِند نتوانست دیتا را لود کند");
+    }
   } catch (err) {
-    setError("خطا در بارگذاری اولیه گراف");
+    console.error("Initialization Error:", err);
+    setError("خطا در بارگذاری دیتای کنگره. مطمئن شو فایل JSON در پوشه بک‌اِند هست.");
+    setApiConnected(false);
   } finally {
     setLoading(false);
   }
 };
-  const computePageRank = async (suspiciousNodes, graphResponse = null) => {
-    setAnalysisRunning(true);
+const computePageRank = async (suspiciousNodes) => {
+  setAnalysisRunning(true);
+  try {
+    // ابتدا گراف فعلی را میگیریم تا داده‌های یال‌ها و نودها کامل باشد
+    const graphResponse = await api.getCurrentGraph();
     
-    try {
-    
-      const pprResponse = await api.computePageRank({
-        damping_factor: 0.85,
-        max_iterations: 100,
-        tolerance: 1e-8,
-        suspicious_nodes: suspiciousNodes
-      });
-      
-      if (pprResponse.success) {
-        setPagerankResults(pprResponse);
-        
-        // Transform data for frontend components
-        const transformedData = transformDataForFrontend(
-          graphResponse,
-          pprResponse,
-          suspiciousNodes
-        );
-        
-        setGraphData(transformedData.graphData);
-        setSystemStats(transformedData.systemStats);
-      } else {
-        throw new Error(pprResponse.error || 'Failed to compute PageRank');
-      }
-    } catch (err) {
-      console.error('Failed to compute PageRank:', err);
-      setError(err.message);
-    } finally {
-      setAnalysisRunning(false);
-    }
-  };
-
-  const transformDataForFrontend = (graphResponse, pprResponse, suspiciousNodes) => {
-    const nodes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].map(nodeId => {
-      const nodeDetail = pprResponse.node_details?.find(n => n.id === nodeId) || {};
-      const suspicion = suspiciousNodes[nodeId] || 0;
-      
-      // Calculate group based on PageRank score for visualization
-      const pprScore = nodeDetail.page_rank || 0;
-      let group = 1;
-      if (pprScore > 0.6) group = 2;
-      if (pprScore > 0.8) group = 3;
-      if (suspicion > 0.5) group = 4;
-      
-      return {
-        id: nodeId,
-        group: group,
-        ppr: pprScore,
-        suspicious: suspicion > 0.5,
-        transactions: nodeDetail.total_connections || Math.floor(Math.random() * 200) + 50,
-        suspicionScore: suspicion
-      };
+    const pprResponse = await api.computePageRank({
+      damping_factor: 0.85,
+      max_iterations: 100,
+      tolerance: 1e-8,
+      suspicious_nodes: suspiciousNodes
     });
-
-    // Use edges from API response or create default edges
-    const links = graphResponse.edges || [
-      { source: 'A', target: 'B', value: 15000 },
-      { source: 'A', target: 'C', value: 45000 },
-      { source: 'B', target: 'D', value: 12000 },
-      { source: 'C', target: 'E', value: 78000 },
-      { source: 'D', target: 'F', value: 9000 },
-      { source: 'E', target: 'G', value: 125000 },
-      { source: 'F', target: 'H', value: 8000 },
-      { source: 'G', target: 'A', value: 95000 },
-      { source: 'H', target: 'B', value: 11000 },
-      { source: 'C', target: 'H', value: 32000 },
-      { source: 'E', target: 'F', value: 56000 },
-      { source: 'G', target: 'D', value: 87000 }
-    ];
     
-
-    return {
-      graphData: { nodes, links },
-      systemStats: {
-        nodes: graphResponse.node_count || nodes.length,
-        edges: graphResponse.edge_count || links.length,
-        suspiciousNodes: Object.keys(suspiciousNodes).length,
-        pprTime: `${pprResponse.compute_time_ms?.toFixed(1) || '0.0'}ms`
-      }
-    };
-  };
-/*
-  const loadMockData = () => {
-    // Mock data for when API is not available
-    setTimeout(() => {
-      setGraphData({
-        nodes: [
-          { id: 'A', group: 1, ppr: 0.45, suspicious: true, transactions: 120, suspicionScore: 0.8 },
-          { id: 'B', group: 1, ppr: 0.32, suspicious: false, transactions: 85, suspicionScore: 0.1 },
-          { id: 'C', group: 2, ppr: 0.78, suspicious: true, transactions: 210, suspicionScore: 0.6 },
-          { id: 'D', group: 2, ppr: 0.21, suspicious: false, transactions: 45, suspicionScore: 0.2 },
-          { id: 'E', group: 3, ppr: 0.67, suspicious: true, transactions: 180, suspicionScore: 0.9 },
-          { id: 'F', group: 3, ppr: 0.12, suspicious: false, transactions: 32, suspicionScore: 0.3 },
-          { id: 'G', group: 4, ppr: 0.89, suspicious: true, transactions: 300, suspicionScore: 0.7 },
-          { id: 'H', group: 4, ppr: 0.34, suspicious: false, transactions: 90, suspicionScore: 0.4 },
-        ],
-        links: [
-          { source: 'A', target: 'B', value: 15000 },
-          { source: 'A', target: 'C', value: 45000 },
-          { source: 'B', target: 'D', value: 12000 },
-          { source: 'C', target: 'E', value: 78000 },
-          { source: 'D', target: 'F', value: 9000 },
-          { source: 'E', target: 'G', value: 125000 },
-          { source: 'F', target: 'H', value: 8000 },
-          { source: 'G', target: 'A', value: 95000 },
-          { source: 'H', target: 'B', value: 11000 },
-          { source: 'C', target: 'H', value: 32000 },
-          { source: 'E', target: 'F', value: 56000 },
-          { source: 'G', target: 'D', value: 87000 }
-        ]
-      });
+    if (pprResponse.success && graphResponse) {
+      setPagerankResults(pprResponse);
       
+      const transformedData = transformDataForFrontend(
+        graphResponse,
+        pprResponse,
+        suspiciousNodes
+      );
+      
+      setGraphData(transformedData.graphData);
+      setSystemStats(transformedData.systemStats);
+    }
+  } catch (err) {
+    console.error('Failed to compute PageRank:', err);
+    setError("خطا در محاسبه الگوریتم. از اتصال بک‌اِند مطمئن شوید.");
+  } finally {
+    setAnalysisRunning(false);
+  }
+};
 
-      setSystemStats({
-        nodes: 8,
-        edges: 12,
-        suspiciousNodes: 4,
-        pprTime: '2.3ms'
-      });
+const transformDataForFrontend = (graphResponse, pprResponse, suspiciousNodes) => {
+  if (!graphResponse || !graphResponse.nodes) return { graphData: null, systemStats: {} };
 
-      setLoading(false);
-    }, 1000);
-  };
-  */
+  const nodes = graphResponse.nodes.map(nodeId => {
+    const pprScore = pprResponse.pagerank_scores?.[nodeId] || 0;
+    const suspicion = suspiciousNodes[nodeId] || 0;
+    
+    let group = 1;
+    if (pprScore > 0.01) group = 2; 
+    if (pprScore > 0.05) group = 3;
+    if (suspicion > 0.5) group = 4;
+    
+    return {
+      id: nodeId,
+      group: group,
+      ppr: pprScore,
+      suspicious: suspicion > 0.5,
+      transactions: Math.floor(pprScore * 10000),  
+      suspicionScore: suspicion
+    };
+  });
 
-  const handleStartAnalysis = async () => {
-    if (apiConnected) {
-      await computePageRank({
-        'A': 0.8,
-        'C': 0.6,
-        'E': 0.9,
-        'G': 0.7,
-        'B': 0.3, // Add some randomness
-        'H': 0.4
-      });
-    } else {
-      // Reload mock data with some variation
-   //   loadMockData();
+  const links = graphResponse.edges.map(e => ({
+    source: e.source,
+    target: e.target,
+    value: e.weight || 1
+  })) || [];
+
+  return {
+    graphData: { nodes, links },
+    systemStats: {
+      nodes: graphResponse.node_count || nodes.length,
+      edges: links.length,
+      suspiciousNodes: Object.keys(suspiciousNodes).length,
+      pprTime: `${pprResponse.compute_time_ms?.toFixed(1) || '0.0'}ms`
     }
   };
+};
+   
+
+const handleStartAnalysis = async () => {
+  if (apiConnected) {
+    await computePageRank({
+      'RepAdamSchiff': 0.9,
+      'SpeakerPelosi': 0.9,
+      'SenSchumer': 0.8,
+      'GOPLeader': 0.8,
+      'SenJohnThune': 0.7,
+      'RepJamesComer': 0.7,
+      'SenCapito': 0.6,
+      'SteveScalise': 0.9,
+      'SenDuckworth': 0.8,
+      'RepMcCaul': 0.7,
+      'SenStabenow': 0.6
+    });
+  }
+};
 
   const handleRefresh = () => {
     loadInitialData();
@@ -222,7 +183,7 @@ const loadInitialData = async () => {
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'monitor', label: 'System Monitor', icon: Cpu },
   ];
-
+  
   return (
     <div className="min-h-screen bg-deep-black bg-cyber-grid">
       {/* Header */}

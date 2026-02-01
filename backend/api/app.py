@@ -144,7 +144,42 @@ def get_current_graph():
         'adjacency_matrix': adj_matrix.tolist(),
         'directed': graph.directed
     })
+@app.route('/graph/congress', methods=['GET'])
+def load_congress_graph():
+    global current_graph_id
+    try:
+        # ۱. بررسی وجود فایل قبل از هر کاری
+        json_path = "/home/mobinabedian/PPR/backend/congress_network_data.json"
+        if not os.path.exists(json_path):
+            return jsonify({
+                'success': False, 
+                'error': f'فایل در مسیر مشخص شده یافت نشد: {json_path}'
+            }), 404
 
+        graph = SparseGraph(directed=True)
+        
+        # ۲. لود کردن دیتا
+        # متد load_congress_data باید تعداد نودها یا لیست نودها را برگرداند
+        node_count = graph.load_congress_data(json_path)
+        
+        graph_id = "congress_graph"
+        graphs[graph_id] = graph
+        current_graph_id = graph_id
+        
+        all_nodes = graph.get_nodes()
+        
+        return jsonify({
+            'success': True, 
+            'graph_id': graph_id, 
+            'node_count': len(all_nodes),
+            'nodes': all_nodes[:100], # فرستادن ۱۰۰ نود اول برای نمایش اولیه
+            'edges': graph.get_edges()[:200] # فرستادن تعدادی از یال‌ها برای رسم گراف
+        })
+    except Exception as e:
+        print(f"Serious Backend Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
 @app.route('/graph/demo', methods=['GET'])
 def create_demo_graph():
     global current_graph_id
@@ -249,5 +284,7 @@ def get_analysis_summary():
         }
     })
 
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
+
