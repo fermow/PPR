@@ -1,0 +1,25 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredPackages">
+        <list>
+          <option value="numpy" />
+          <option value="scipy" />
+          <option value="networkx" />
+          <option value="pytest" />
+          <option value="pytest-cov" />
+          <option value="black" />
+          <option value="flake8" />
+          <option value="matplotlib" />
+          <option value="pyyam" />
+          <option value="mypy" />
+          <option value="types-PyYAML" />
+          <option value="Flask" />
+          <option value="Flask-CORS" />
+          <option value="pyyaml" />
+        </list>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>
