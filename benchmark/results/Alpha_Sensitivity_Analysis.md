@@ -1,11 +1,12 @@
-# 🔬 گزارش تحلیل حساسیت پارامتر آلفا (Alpha Sensitivity)
+# Alpha Parameter Sensitivity Analysis Report
 
-**هدف:** تعیین اثر ضریب میرایی ($\alpha$) بر سرعت همگرایی و دقت شناسایی متقلبان.
+**Objective:** To determine the effect of the damping factor ($\alpha$) on convergence speed and the accuracy of fraud detection.
 
-### یافته‌های کلیدی:
-1. **رابطه معکوس:** با کاهش مقدار $\alpha$، تعداد تکرارهای (Iterations) مورد نیاز برای همگرایی به طور چشم‌گیری افزایش می‌یابد. 
-2. **پخش جرم (Mass Distribution):** - در آلفای پایین (۰.۰۵)، نفوذ "شک" در لایه‌های عمیق گراف بیشتر است اما زمان محاسبات طولانی‌تر می‌شود.
-   - در آلفای بالا (۰.۸)، الگوریتم سریعاً همگرا می‌شود اما شناسایی فقط محدود به همسایگان بلافاصله بذرها می‌ماند.
+## Key Findings:
+1. **Inverse Relationship:** As the value of $\alpha$ decreases, the number of iterations required for convergence increases significantly.
+2. **Mass Distribution:**
+   - At low alpha (0.05), the propagation of “suspicion” penetrates deeper layers of the graph, but at the cost of longer computation time.
+   - At high alpha (0.8), the algorithm converges rapidly; however, detection remains limited to the immediate neighbors of the seed nodes.
 
-### برآیند پژوهشی:
-مقدار **۰.۱۵** به عنوان مقدار بهینه انتخاب شد. این مقدار اجازه می‌دهد "امتیاز شک" (Suspicion Score) به اندازه کافی در شبکه نفوذ کند تا نودهای **طلایی** (متقلبان پنهان) شناسایی شوند، در حالی که سرعت همگرایی در سطح مطلوبی باقی می‌ماند.
+## Research Conclusion:
+The value **0.15** was selected as the optimal setting. This value allows the *Suspicion Score* to sufficiently diffuse throughout the network to identify **golden nodes** (hidden fraudsters), while maintaining an acceptable convergence speed.
