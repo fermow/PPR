@@ -1,10 +1,10 @@
-```markdown
+```
 # 🔍 Fraud Detection System using Personalized PageRank (PPR)
 
 **Shahid Beheshti University**  
 **Data Structures Course Project**  
 **Instructor: Dr. Katanforoush**  
-*Spring 2024 | Department of Computer Science*
+*2026 | Department of Computer Science*
 
 ---
 
@@ -212,4 +212,5 @@ Academic Use Only – Shahid Beheshti University
 ```
 
 ---
+
 
