@@ -1,4 +1,4 @@
-```
+
 # 🔍 Fraud Detection System using Personalized PageRank (PPR)
 
 **Shahid Beheshti University**  
@@ -145,13 +145,3 @@ The interactive dashboard implements a **tri-color node coding system**:
 | **Backend Development** | Flask API, graph processing pipelines |
 | **Frontend Development** | React dashboard, D3.js visualizations |
 | **Data Processing** | Graph construction, sparse matrix handling |
-
-
-
-
-```
-
----
-
-
-
