@@ -60,7 +60,6 @@ Where:
 
 ### **Development & Deployment**
 - **pip/conda** for dependency management
-- **Docker** for containerization
 - **Git** for version control
 
 ---
@@ -78,7 +77,7 @@ npm ≥ 9.x
 ```bash
 # Clone repository
 git clone https://github.com/SBU-DS/fraud-detection-ppr.git
-cd fraud-detection-ppr/backend
+cd PPR/backend
 
 # Create virtual environment
 python -m venv venv
@@ -104,11 +103,7 @@ npm start
 ```
 *Dashboard available at http://localhost:3000*
 
-### **Docker Deployment**
-```bash
-# Build and run with Docker Compose
-docker-compose up --build
-```
+
 
 ---
 
@@ -119,7 +114,7 @@ The interactive dashboard implements a **tri-color node coding system**:
 | Color | Node Type | Criteria |
 |-------|-----------|----------|
 | 🟪 **Pink** | Manual Seed Fraudsters | User-flagged entities |
-| 🟨 **Gold** | AI-Detected Suspects | PPR score > 0.1 threshold |
+| 🟨 **Gold** | Algorithm-Detected Suspects | PPR score > 0.1 threshold |
 | 🔵 **Cyan** | Normal Nodes | PPR score ≤ 0.1 |
 
 ### **Graph Interactions**
@@ -130,48 +125,6 @@ The interactive dashboard implements a **tri-color node coding system**:
 
 ---
 
-## 📁 Project Structure
-
-```
-fraud-detection-ppr/
-│
-├── 📂 docs/
-│   ├── project_specification.pdf
-│   ├── algorithm_analysis.md
-│   └── presentation_slides.pptx
-│
-├── 📂 data/
-│   ├── raw_transactions.csv
-│   ├── seed_fraudsters.json
-│   └── processed_graph.pkl
-│
-├── 📂 src/
-│   ├── 📂 backend/
-│   │   ├── app.py              # Flask API server
-│   │   ├── ppr_algorithm.py    # Custom Power Iteration
-│   │   ├── graph_utils.py      # NetworkX operations
-│   │   └── requirements.txt
-│   │
-│   └── 📂 frontend/
-│       ├── public/
-│       ├── src/
-│       │   ├── components/     # React components
-│       │   ├── services/       # API communication
-│       │   ├── utils/          # Visualization helpers
-│       │   └── App.tsx
-│       └── package.json
-│
-├── 📂 results/
-│   ├── detection_results.json
-│   ├── performance_metrics.txt
-│   └── convergence_logs.csv
-│
-├── docker-compose.yml
-├── README.md
-└── LICENSE
-```
-
----
 
 ## 📊 Algorithm Performance
 
@@ -193,24 +146,12 @@ fraud-detection-ppr/
 | **Frontend Development** | React dashboard, D3.js visualizations |
 | **Data Processing** | Graph construction, sparse matrix handling |
 
----
 
-## 📚 References
 
-1. Page, L., et al. (1999). *The PageRank Citation Ranking*
-2. Gleich, D. F. (2015). *PageRank beyond the Web*
-3. *Fraud Detection in Financial Networks* – ACM Computing Surveys
 
----
-
-## ⚖️ License
-
-Academic Use Only – Shahid Beheshti University  
-© 2024 Data Structures Course Project
-
-*For educational purposes. Commercial use prohibited without authorization.*
 ```
 
 ---
+
 
 
