@@ -5,29 +5,24 @@ import matplotlib.pyplot as plt
 import os
 
 def ppr_core(G, seed_nodes, alpha=0.15, epsilon=1e-6):
-    """پیاده‌سازی هسته PPR برای تست‌های تحقیقاتی طبق فرمول پروژه"""
     nodes = list(G.nodes())
     n = len(nodes)
     node_to_idx = {node: i for i, node in enumerate(nodes)}
     
-    # بردار شخصی‌سازی p [cite: 24, 25]
     p = np.zeros(n)
     for seed in seed_nodes:
         if seed in node_to_idx:
             p[node_to_idx[seed]] = 1.0 / len(seed_nodes)
     
-    # ماتریس انتقال M (به صورت اسپارس ساده) [cite: 26]
-    M = nx.google_matrix(G, alpha=1).T # استفاده از آلفا=1 برای گرفتن ماتریس انتقال خالص
+    M = nx.google_matrix(G, alpha=1).T 
     
     r = p.copy()
     iterations = 0
     start_time = time.time()
     
     while True:
-        # فرمول: r_new = (1-alpha) * M * r + alpha * p [cite: 24]
         r_new = (1 - alpha) * np.dot(M, r).flatten() + alpha * p
         
-        # معیار همگرایی L1 [cite: 33]
         if np.linalg.norm(r_new - r, ord=1) < epsilon:
             break
         
@@ -37,15 +32,12 @@ def ppr_core(G, seed_nodes, alpha=0.15, epsilon=1e-6):
     return time.time() - start_time, iterations
 
 def run_scalability_test():
-    """آزمایش زمان اجرا نسبت به سایز گراف """
     sizes = [100, 500, 1000, 2000, 5000]
     times = []
     
     print("Starting Scalability Test...")
     for size in sizes:
-        # ساخت گراف تصادفی برای تست
         G = nx.fast_gnp_random_graph(size, 0.01, directed=True)
-        # مدیریت گره‌های Dangling طبق خواسته پروژه [cite: 27, 28]
         duration, _ = ppr_core(G, [0])
         times.append(duration)
         print(f"Size {size} finished in {duration:.4f}s")
@@ -60,7 +52,6 @@ def run_scalability_test():
     print("Scalability plot saved to results/")
 
 def run_alpha_sensitivity():
-    """تحلیل حساسیت پارامتر آلفا """
     alphas = [0.05, 0.15, 0.3, 0.5, 0.8]
     G = nx.fast_gnp_random_graph(1000, 0.01, directed=True)
     avg_iterations = []
@@ -80,7 +71,6 @@ def run_alpha_sensitivity():
     print("Alpha sensitivity plot saved to results/")
 
 if __name__ == "__main__":
-    # ایجاد پوشه نتایج اگر وجود ندارد 
     if not os.path.exists('../results'):
         os.makedirs('../results')
     
